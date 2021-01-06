@@ -1,7 +1,7 @@
 /*
- * Copyright 2014 Higher Frequency Trading
+ * Copyright 2014-2020 chronicle.software
  *
- * http://www.higherfrequencytrading.com
+ * http://www.chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package net.openhft.chronicle.logger.slf4j;
 
-import net.openhft.chronicle.logger.*;
+import net.openhft.chronicle.logger.ChronicleLogManager;
+import net.openhft.chronicle.logger.ChronicleLogWriter;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.helpers.NOPLogger;
+import org.slf4j.impl.SimpleLogger;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,15 +43,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * <ul>
  * <li><code>chronicle.logger.root.path</code></li>
  * <li><code>chronicle.logger.root.level</code></li>
- * <li><code>chronicle.logger.root.shortName</code></li>
  * <li><code>chronicle.logger.root.append</code></li>
- * <li><code>chronicle.logger.root.format</code></li>
- * <li><code>chronicle.logger.root.type</code></li>
  * </ul>
  */
 public class ChronicleLoggerFactory implements ILoggerFactory {
     private final Map<String, Logger> loggers;
-    private ChronicleLogManager manager;
+    private final ChronicleLogManager manager;
+
+    // *************************************************************************
+    //
+    // *************************************************************************
 
     /**
      * c-tor
@@ -62,7 +63,7 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
     }
 
     // *************************************************************************
-    //
+    // for testing
     // *************************************************************************
 
     /**
@@ -72,16 +73,9 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
     public Logger getLogger(String name) {
         try {
             return doGetLogger(name);
-        } catch(Exception e) {
-            System.err.println(
-                new StringBuilder("Unable to initialize chronicle-logger-slf4j ")
-                    .append("(")
-                    .append(name)
-                    .append(")")
-                    .append("\n  ")
-                    .append(e.getMessage())
-                    .toString()
-            );
+        } catch (Exception e) {
+            System.err.println("Unable to initialize chronicle-logger-slf4j (" + name + ")\n  " + e.getMessage());
+            e.printStackTrace();
         }
 
         return NOPLogger.NOP_LOGGER;
@@ -91,68 +85,22 @@ public class ChronicleLoggerFactory implements ILoggerFactory {
     //
     // *************************************************************************
 
-    /**
-     * Preload loggers
-     */
-    public synchronized void warmup() {
-    }
-
-    /**
-     * close underlying Chronicles
-     */
-    public synchronized void shutdown() {
-        this.manager.clear();
+    synchronized void reload() {
         this.loggers.clear();
-    }
-
-    /**
-     *
-     */
-    public synchronized void reload() {
-        shutdown();
-
         this.manager.reload();
     }
 
-    // *************************************************************************
-    //
-    // *************************************************************************
-
-    private synchronized Logger doGetLogger(String name) throws IOException {
+    private synchronized Logger doGetLogger(String name) {
         Logger logger = loggers.get(name);
         if (logger == null) {
-            final ChronicleLogWriter writer = manager.createWriter(name);
-            if(manager.isSimple(name)) {
-                logger = new ChronicleLogger.Text(
-                    writer,
-                    name,
-                    ChronicleLogLevel.WARN);
-
-            } else if(manager.isBinary(name)) {
-                logger = new ChronicleLogger.Binary(
-                    writer,
-                    name,
-                    manager.cfg().getLevel(name));
-
-            } else if(manager.isText(name)) {
-                logger = new ChronicleLogger.Text(
-                    writer,
-                    name,
-                    manager.cfg().getLevel(name));
-            }
-
-            if(logger != null) {
-                loggers.put(name, logger);
-
+            if (name != null && name.startsWith("net.openhft")) {
+                SimpleLogger.lazyInit();
+                logger = new SimpleLogger(name);
             } else {
-                System.err.println(
-                    new StringBuilder("Unable to get a logger for ")
-                        .append("(")
-                        .append(name)
-                        .append(")")
-                        .toString()
-                );
+                final ChronicleLogWriter writer = manager.getWriter(name);
+                logger = new ChronicleLogger(writer, name, manager.cfg().getLevel(name));
             }
+            loggers.put(name, logger);
         }
 
         return logger;

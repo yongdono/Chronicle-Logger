@@ -1,7 +1,7 @@
 /*
- * Copyright 2014 Higher Frequency Trading
+ * Copyright 2014-2020 chronicle.software
  *
- * http://www.higherfrequencytrading.com
+ * http://www.chronicle.software
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,6 @@ import org.slf4j.spi.LoggerFactoryBinder;
 
 public class StaticLoggerBinder implements LoggerFactoryBinder {
 
-    /**
-     * The unique instance of this class.
-     */
     private static final StaticLoggerBinder SINGLETON = new StaticLoggerBinder();
     private static final String loggerFactoryClassStr = ChronicleLoggerFactory.class.getName();
     /**
@@ -33,7 +30,7 @@ public class StaticLoggerBinder implements LoggerFactoryBinder {
      * against. The value of this field is usually modified with each release.
      */
     // to avoid constant folding by the compiler, this field must *not* be final
-    public static String REQUESTED_API_VERSION = "1.6.99";  // !final
+    public static String REQUESTED_API_VERSION = "1.7.30";  // !final
     /**
      * The ILoggerFactory instance returned by the {@link #getLoggerFactory}
      * method should always be the same object
